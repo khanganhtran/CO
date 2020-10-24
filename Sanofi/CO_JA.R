@@ -1,4 +1,4 @@
-setwd("~/Desktop/BINF/projects/CO/CO - SP")
+setwd("~/Desktop/BINF/github/CO/Sanofi")
 # setwd("C:/Users/Ktran/Desktop/Bioinfo/CodonOptimization/Sanofi")
 
 require(tidyr); require(dplyr); require(stringr); require(Biostrings); require(seqinr); require(openxlsx);require(ggplot2);require(e1071)
@@ -1799,234 +1799,6 @@ rm(list = ls.str(mode = 'character')) #remove all character variables
 
 
 
-####################################################################################################
-#Final Boss
-#Good one
-
-
-
-codonoptimize <- function(df, n, CAI, codons, nCIS){
-  
-  start.time <- Sys.time() #Start the time
-  
-  df.prot <- df
-  CAI <- as.numeric(CAI)
-  n <- as.integer(n)
-  
-  df.human <- as.character(codons)
-  df.nCIS <- as.character(nCIS)
-  
-  print("Codon Optimizing Windows...")
-  df.master <- NULL
-  for(i in 1:nrow(df.prot)){
-    
-    df <- CO.filter(seq = df.prot$window[i], 
-                    n=n, 
-                    CAI=CAI, 
-                    codons=df.human, 
-                    nCIS=df.nCIS
-    )
-    
-    #if df.master is empty, it becomes the first df
-    if(isEmpty(df.master[1]) == TRUE){
-      df.master <- df[,c("n", "mrna")]
-      #Write code there that will clean up the df
-      
-      colnames(df.master) <- c("n", "mrna")
-    }
-    
-    else{
-      # if not, append subsequent dataframes
-      df <- df[,c("n", "mrna")]
-      df.master <- merge(df.master, df, by = "n", all.y = TRUE, all.x = TRUE)
-      
-      colnames(df.master) <- c("n", sprintf("window%02d", seq(1,ncol(df.master)-1)))
-    }
-    
-
-    print(paste("Window", as.character(i), "finished!", sep = " "))
-  }
-  
-  print("All windows have finished!")
-  
-  time <- as.character(round(Sys.time()-start.time, 2))
-  print(paste("Time elapsed:", time, sep = " " ))
-  
-  df.human <- read.xlsx(df.human, colNames = TRUE) #Load in AA chart
-  w <- df.human[order(df.human$Codon),] #Preparing vector of RelativeAdaptiveness to calculate CAI
-  rownames(w) <- tolower(w$Codon)
-  w <- w$RelativeAdaptiveness 
-  
-  df.nCIS <- read.fasta.DNA(df.nCIS) #Load in nCIS elements
-  
-  rm(df)
-  rm(df.prot)
-  
-  
-  df.master <- df.master[complete.cases(df.master), ] #Remove dataframes with na values
-  
-  
-  #Create random dataframe with n rows
-  df.apprentice <- as.data.frame(matrix(0, ncol = ncol(df.master)-1, nrow = 300))
-  #Populate dataframe with integers in df.master (biased towards higher half)
-  for(i in 1:ncol(df.apprentice)){
-    df.apprentice[,i] <- sample(x = floor(nrow(df.master)/2), size = 50, replace = TRUE)
-  }
-  
-  #Double for-loop to use coordinates from df.app to grab seq-windows from df.master
-  for(i in 1:nrow(df.apprentice)){
-    for(j in 1:ncol(df.apprentice)){
-      n <- df.apprentice[i,j] #the number at the incremental coordinates
-      df.apprentice[i,j] <- df.master[,-1][n, j]
-    }
-  }
-  
-  #Combine df.apprentice & df.master
-  colnames(df.apprentice) <- c(sprintf("window%02d", seq(1,ncol(df.master)-1)))
-  df.master <- rbind(df.master[,-1] , df.apprentice)
-  
-  rm(df.apprentice)
-  
-  df.master$mrna <- 0
-  for(i in 1:nrow(df.master)){
-    seq <- paste(df.master[i,1:ncol(df.master)-1], collapse = "")
-    df.master$mrna[i] <- seq
-  }
-  
-  #Final df of CO sequences (Final analytics need to be performed)
-  df.master <- data.frame(n = 1:nrow(df.master), mrna = df.master$mrna)
-  df.master <- data.frame(n = 1:length(unique(df.master$mrna)), mrna = unique(df.master$mrna)) #only unique candidates
-  
-  df <- df.master; rm(df.master)
-  df$mrna <- as.character(df$mrna)
-  
-  print("Table of Codon Optimized mRNA made!")
-  
-  print("Performing mRNA analytics...")
-  
-  
-  df <- df %>% mutate(GC = GC.calc(mrna)) #calculate transcript GC
-  
-  #Establishing analytical variables
-  df[,c("CAI", "CFD", "GC.max", "GC.min", "motif.ATCTGTT", "motif.TTTTTT", "motif.HINDI", "motif.Sap1", "motif.Sap12", "motif.Xbal", "motif.aarl1", "motif.aarl2")] <- 0
-  
-  
-  #Calculating transcript analytics
-  for(i in 1:nrow(df)){
-    
-    #Calculating GC max/min in windows
-    GC.max <- GC.minmax(string = df$mrna[i], size = 30, minmax = "MAX")
-    df$GC.max[i] <- GC.max
-    
-    GC.min <- GC.minmax(string = df$mrna[i], size = 30, minmax = "MIN")
-    df$GC.min[i] <- GC.min
-    
-    ####### In-house Motif analysis
-    object <- DNAString(df$mrna[i]) #DNAString object to be used for motif analysis
-    
-    #rrnB1 terminator
-    df$motif.ATCTGTT[i] <- m.motif(object, motif = "ATCTGTT", max = 1, min = 0)
-    
-    #Stretch of T's
-    df$motif.TTTTTT[i] <- m.motif(object, motif = "TTTTTT", max = 0, min = 0)
-    
-    #HindIII - AAGCTT
-    df$motif.HINDI[i] <- m.motif(object, motif = "AAGCTT", max = 0, min = 0)
-    
-    #Sap1 - GAAGAGC
-    df$motif.Sap1[i] <- m.motif(object, motif = "GAAGAGC", max = 0, min = 0)
-    df$motif.Sap12[i] <- m.motif(object, motif = "GCTCTTC", max = 0, min = 0)
-    
-    #Xbal - TCTAGA
-    df$motif.Xbal[i] <- m.motif(object, motif = "TCTAGA", max = 0, min = 0)
-    
-    #AarI (CACCTGC and GCAGGTG, exact match)
-    df$motif.aarl1[i] <- m.motif(object, motif = "CACCTGC", max = 0, min = 0)
-    df$motif.aarl2[i] <- m.motif(object, motif = "GCAGGTG", max = 0, min = 0)
-    
-    #Analyzing CAI
-    mrna.parse <- str_split(tolower(df$mrna[i]), "")[[1]]
-    df$CAI[i] <- cai(mrna.parse , w, numcode = 1, zero.threshold = 0.0001, zero.to = 0.01)
-    
-    #Analyzing CFD
-    df$CFD[i] <- assign.CFD(seq = df$mrna[i], table = df.human)
-    
-    rm(object) #remove object for aesthetic purposes #put this OUTSIDE
-    
-  }
-  
-  #Filtering the transcripts (analytics)
-  df <- df[
-    df$GC.max < 0.70 &
-    df$GC.min > 0.30 &
-    df$motif.ATCTGTT == 0 &
-      df$motif.TTTTTT == 0 &
-      df$motif.HINDI == 0 &
-      df$motif.Sap1 == 0 &
-      df$motif.Sap12 == 0 &
-      df$motif.Xbal == 0 &
-      
-      df$motif.aarl1 == 0 &
-      df$motif.aarl2 == 0 &
-      
-      df$CAI >= 0.85,] #Filter out the "bad" transcripts
-  
-  df<- unique(df) #grab only UNIQUE transcripts!
-  df <- df[order(-df$CAI),]
-  
-  df <- find.nCIS(df, df.nCIS) #analyze inputed df for negative CIS elements
-  
-  df$nRE <- 0 #analyze df for negative Repeat elements
-  for(i in 1:nrow(df)){
-    object <- DNAString(df$mrna[i]) #DNAString object to be used for motif analysis
-    
-    df$nRE[i] <- count.NRE(sequence = df$mrna[i])
-    
-    rm(object)
-  }
-  
-  
-  print("Transcript Analytics Finished!")
-  
-  
-  time <- as.character(round(Sys.time()-start.time, 2))
-  print(paste("Total Run-time:", time, sep = " " ))
-
-  
-  
-  rm(list = ls.str(mode = 'numeric')) #remove all numeric variables
-  rm(list = ls.str(mode = 'character')) #remove all character variables
-  
-  return(df)
-  
-  
-}
-
-
-prot<- "MATGSRTSLLLAFGLLCLPWLQEGSAFPTIPLSQSALTQPASVSGSPGQSITISCTGTSSDVGGYNYVSWYQQHPGKAPKLMIYDVSKRPSGVSNRFSGSKSGNTASLTISGLQSEDEADYYCNSLTSISTWVFGGGTKLTVLGQPKAAPSVTLFPPSSEELQANKATLVCLISDFYPGAVTVAWKADSSPVKAGVETTTPSKQSNNKYAASSYLSLTPEQWKSHRSYSCQVTHEGSTVEKTVAPTECS*" 
-
-# nchar(prot) #check to see how long the AA seq is
-# df.prot <- split.AA(aa=prot, winsize = 84)
-# nchar(df.prot$window)
-# # df.prot <- df.prot[1:5,]
-# prot == paste(df.prot$window, collapse = "")
-
-
-nchar(prot) #check to see how long the AA seq is
-df.prot <- split.AA(seq=prot, n = 3)
-nchar(df.prot$window)
-# df.prot <- df.prot[1:5,]
-prot == paste(df.prot$window, collapse = "")
-
-
-
-
-df <- codonoptimize(df = df.prot, 
-                    n = 1000, 
-                    CAI = 0.8, 
-                    codons="AminoAcidTable_Human_optimized_V2.xlsx", 
-                    nCIS="negativeCIS/negativeCISelements.fasta"
-                    )
 
 
 for(i in 1:nrow(df)){
@@ -2054,7 +1826,6 @@ for(i in 1:nrow(df)){
   print(DETECTOR(sequence = seq, motif = "CACCTGC", mismatch = 0)) #Aarl
   print(DETECTOR(sequence = seq, motif = "GCAGGTG", mismatch = 0)) #Aarl
   print("**************************************")
-  
 }
 
 
@@ -2267,8 +2038,6 @@ codonoptimize <- function(seq, p, n, CAI, codons, nCIS){
 }
 
 prot<- "MATGSRTSLLLAFGLLCLPWLQEGSAFPTIPLSQSALTQPASVSGSPGQSITISCTGTSSDVGGYNYVSWYQQHPGKAPKLMIYDVSKRPSGVSNRFSGSKSGNTASLTISGLQSEDEADYYCNSLTSISTWVFGGGTKLTVLGQPKAAPSVTLFPPSSEELQANKATLVCLISDFYPGAVTVAWKADSSPVKAGVETTTPSKQSNNKYAASSYLSLTPEQWKSHRSYSCQVTHEGSTVEKTVAPTECS*" 
-
-
 
 df <- codonoptimize(seq = prot,
                      p = 3,

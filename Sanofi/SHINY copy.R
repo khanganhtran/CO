@@ -13,7 +13,7 @@ library(shiny)
 #[X] introduce a "save" button
 #[ ] find out how to upload the app
 
-#[X] Side Quest - download and link github
+#[ ] Side Quest - download and link github
 
 ####################################################################################################
 
@@ -860,7 +860,7 @@ codonoptimize <- function(seq, p, n, CAI, codons, nCIS){
       df$motif.aarl1 == 0 &
       df$motif.aarl2 == 0 &
       
-      df$CAI >= CAI,] #Filter out the "bad" transcripts
+      df$CAI >= 0.85,] #Filter out the "bad" transcripts
   
   df<- unique(df) #grab only UNIQUE transcripts!
   df <- df[order(-df$CAI),]
@@ -1059,27 +1059,17 @@ translate.seq <- function(seq){
 
 
 ui <- fluidPage(
-  # titlePanel("TBio Codon Optimization"),
-
-  titlePanel(title =  div(img(src="logo.jpg", height="25%", width="25%"))),
-  
-  # titlePanel(fluidRow(
-  #   column(9, "Codon Optimization"), 
-  #   column(3, img(height="50%", width="50%", src = "logo.jpg"))
-  # )
-  # ),
-  
+  titlePanel("TBio Codon Optimization"),
   
   sidebarLayout(
     sidebarPanel(
-      h4(strong("Codon Optimization tool"), align = "center"),
       
-      # helpText("Input codon optimization parameters","(sequence should be captilized)"),
+      helpText("Input codon optimization parameters","(sequence should be captilized)"),
       
-      textInput("aa", label = "Input amino acid sequence", value = "MATGSRTSLLLAFGLLCLPWLQEGSAFPTIPLSQSALTQPASVSGSPGQSITISCTGTSSDVGGYNYVSWYQQHPGKAPKLMIYDVSKRPSGVSNRFSGSKSGNTASLTISGLQSEDEADYYCNSLTSISTWVFGGGTKLTVLGQPKAAPSVTLFPPSSEELQANKATLVCLISDFYPGAVTVAWKADSSPVKAGVETTTPSKQSNNKYAASSYLSLTPEQWKSHRSYSCQVTHEGSTVEKTVAPTECS*" ),
-      selectInput("p", label = "Sequence partition(s)", choices = as.character(c(1:10)), selected = "#"),
-      selectInput("n", label = "Generate sequence(s)", choices = as.character(seq(1000,10000, by = 1000)), selected = "#"),
-      selectInput("cai", label = "Codon Adaptation Index (min)", choices = as.character(seq(0.6,0.85, by = 0.05)), selected = "#"),
+      textInput("aa", label = "Input Amino Acid sequence", value = "MATGSRTSLLLAFGLLCLPWLQEGSAFPTIPLSQSALTQPASVSGSPGQSITISCTGTSSDVGGYNYVSWYQQHPGKAPKLMIYDVSKRPSGVSNRFSGSKSGNTASLTISGLQSEDEADYYCNSLTSISTWVFGGGTKLTVLGQPKAAPSVTLFPPSSEELQANKATLVCLISDFYPGAVTVAWKADSSPVKAGVETTTPSKQSNNKYAASSYLSLTPEQWKSHRSYSCQVTHEGSTVEKTVAPTECS*" ),
+      selectInput("p", label = "Sequence Partition(s)", choices = as.character(c(1:10)), selected = "#"),
+      selectInput("n", label = "Generated sequence(s)", choices = as.character(seq(1000,10000, by = 1000)), selected = "#"),
+      selectInput("cai", label = "Codon Adaptation Index", choices = as.character(seq(0.6,0.85, by = 0.05)), selected = "#"),
       
       # selectInput("cai", label = "Sequence Partition(s)", choices = as.character(c(1:10)), selected = "#"),
       
@@ -1091,7 +1081,7 @@ ui <- fluidPage(
       
       downloadButton("downloadData", "Download"),
       # actionButton("go2", "submit"),
-      helpText("Click 'submit' to codon optimize amino acid sequence")
+      p("Click the button to update the value displayed in the main panel.")
       ),
     
     mainPanel(
