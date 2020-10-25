@@ -1,0 +1,12 @@
+name: codonoptimize
+title: codonoptimize
+username:
+account: khanganhtran
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3088516
+bundleId: 3778544
+url: https://khanganhtran.shinyapps.io/codonoptimize/
+when: 1603576442.6527
+asMultiple: FALSE
+asStatic: FALSE

@@ -2040,8 +2040,8 @@ codonoptimize <- function(seq, p, n, CAI, codons, nCIS){
 prot<- "MATGSRTSLLLAFGLLCLPWLQEGSAFPTIPLSQSALTQPASVSGSPGQSITISCTGTSSDVGGYNYVSWYQQHPGKAPKLMIYDVSKRPSGVSNRFSGSKSGNTASLTISGLQSEDEADYYCNSLTSISTWVFGGGTKLTVLGQPKAAPSVTLFPPSSEELQANKATLVCLISDFYPGAVTVAWKADSSPVKAGVETTTPSKQSNNKYAASSYLSLTPEQWKSHRSYSCQVTHEGSTVEKTVAPTECS*" 
 
 df <- codonoptimize(seq = prot,
-                     p = 3,
-                     n = 1000,
+                     p = 5,
+                     n = 10000,
                      CAI = 0.7,
                      codons = "AminoAcidTable_Human_optimized_V2.xlsx",
                      nCIS = "negativeCIS/negativeCISelements.fasta"

@@ -58,3 +58,8 @@ server <- function(input, output) {
 }
 
 shinyApp(ui, server)
+
+
+rsconnect::setAccountInfo(name='khanganhtran',
+                          token='F9988BD1FB6E783108872A9024658E09',
+                          secret='ypLH8a5keqZsgkTEKqpfL7wkKF0A+DxcdrnTMwCV')
